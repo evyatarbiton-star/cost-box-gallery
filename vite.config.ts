@@ -9,5 +9,6 @@ export default defineConfig({
     alias: {
       '@glow-icons': path.resolve(__dirname, '../glow-design-system/src/components/Icon'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 })
