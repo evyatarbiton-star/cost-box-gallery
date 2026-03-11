@@ -1543,7 +1543,7 @@ function PriceRangeBar({ copy }: { copy: BannerCopyEntry }) {
   return (
     <div>
       {copy.label && (
-        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DISABLED }}>
+        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
           {copy.label}
         </p>
       )}
@@ -1574,8 +1574,8 @@ function PriceRangeBar({ copy }: { copy: BannerCopyEntry }) {
 
       {/* Min/Max labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: SPACE_XXXS }}>
-        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DISABLED }}>$1,000</span>
-        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DISABLED }}>$4,200</span>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>$1,000</span>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>$4,200</span>
       </div>
     </div>
   )
@@ -1604,7 +1604,7 @@ function CopayBanner({ copy }: { copy: BannerCopyEntry }) {
   return (
     <div>
       {copy.label && (
-        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DISABLED }}>
+        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
           {copy.label}
         </p>
       )}
@@ -1692,7 +1692,7 @@ function ProviderChargeBanner({ copy }: { copy: BannerCopyEntry }) {
   return (
     <div>
       {copy.label && (
-        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DISABLED }}>
+        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
           {copy.label}
         </p>
       )}
@@ -1940,7 +1940,7 @@ function ProcedureModal({
                   </span>
                 </div>
                 {showPrices && (
-                  <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, color: TEXT_LIGHT }}>
+                  <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, color: TEXT_DARK }}>
                     {proc.price}
                   </span>
                 )}
@@ -1991,7 +1991,7 @@ function ProcedurePickerBannerContent({
     return (
       <div>
         {copyAfter.label && (
-          <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DISABLED }}>
+          <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
             {copyAfter.label}
           </p>
         )}
@@ -2024,8 +2024,8 @@ function ProcedurePickerBannerContent({
           )
         })()}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: SPACE_XXXS }}>
-          <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DISABLED }}>{selectedProc.rangeMin}</span>
-          <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DISABLED }}>{selectedProc.rangeMax}</span>
+          <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>{selectedProc.rangeMin}</span>
+          <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>{selectedProc.rangeMax}</span>
         </div>
       </div>
     )
@@ -2035,7 +2035,7 @@ function ProcedurePickerBannerContent({
   return (
     <div>
       {copyBefore.label && (
-        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DISABLED }}>
+        <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
           {copyBefore.label}
         </p>
       )}
@@ -2175,12 +2175,12 @@ function ProviderCard({
       >
         <StatColumn icon={<span style={{ color: '#ffd129' }}><StarSolidIcon size="sm" /></span>} label={`${provider.rating}/5 (${provider.reviews})`} />
         <div style={{ width: 1, height: 32, backgroundColor: BORDER_LIGHT }} />
-        <StatColumn icon={<span style={{ color: TEXT_LIGHT }}><LocationIcon size="sm" /></span>} label={provider.distance} />
+        <StatColumn icon={<span style={{ color: TEXT_DARK }}><LocationIcon size="sm" /></span>} label={provider.distance} />
         <div style={{ width: 1, height: 32, backgroundColor: BORDER_LIGHT }} />
         {provider.virtual ? (
-          <StatColumn icon={<span style={{ color: TEXT_LIGHT }}><VideoCameraIcon size="sm" /></span>} label="Virtual visit" />
+          <StatColumn icon={<span style={{ color: TEXT_DARK }}><VideoCameraIcon size="sm" /></span>} label="Virtual visit" />
         ) : (
-          <StatColumn icon={<span style={{ color: TEXT_LIGHT }}><VideoCameraIcon size="sm" /></span>} label="In-person" />
+          <StatColumn icon={<span style={{ color: TEXT_DARK }}><VideoCameraIcon size="sm" /></span>} label="In-person" />
         )}
       </div>
 
@@ -2550,7 +2550,7 @@ function ScreenContent({
           gap: SPACE_S,
         }}
       >
-        <p style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 16, color: TEXT_LIGHT, lineHeight: '19px', margin: 0, paddingLeft: SPACE_XXXS }}>
+        <p style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 16, color: TEXT_DARK, lineHeight: '19px', margin: 0, paddingLeft: SPACE_XXXS }}>
           {effectiveResultCount}
         </p>
         {providers.map((p) => (
@@ -2681,8 +2681,8 @@ function SidebarNavItem({
         fontWeight: isActive ? W_MEDIUM : W_REGULAR,
         fontSize: 13,
         lineHeight: '18px',
-        color: isActive ? '#ffffff' : 'rgba(255,255,255,0.45)',
-        backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+        color: isActive ? '#000000' : '#666666',
+        backgroundColor: isActive ? '#efefef' : 'transparent',
         border: 'none',
         borderRadius: 8,
         padding: `8px 12px`,
@@ -2698,8 +2698,8 @@ function SidebarNavItem({
           fontFamily: FONT,
           fontSize: 10,
           fontWeight: W_MEDIUM,
-          color: 'rgba(255,255,255,0.3)',
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          color: '#666666',
+          backgroundColor: '#d5d5d5',
           padding: '2px 6px',
           borderRadius: 4,
         }}>
@@ -2731,7 +2731,7 @@ function DescriptionPanel({
         fontWeight: W_REGULAR,
         fontSize: 13,
         lineHeight: '20px',
-        color: 'rgba(255,255,255,0.4)',
+        color: '#666666',
         margin: 0,
       }}>
         {description}
@@ -2740,7 +2740,7 @@ function DescriptionPanel({
         {highlights.map((h, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             <span style={{ color: PRIMARY_TEXT, fontSize: 6, lineHeight: '18px', flexShrink: 0, marginTop: 1 }}>●</span>
-            <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 12, lineHeight: '18px', color: 'rgba(255,255,255,0.35)' }}>
+            <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 12, lineHeight: '18px', color: '#777777' }}>
               {h}
             </span>
           </div>
@@ -2780,10 +2780,10 @@ function EditableField({
           fontFamily: FONT,
           fontSize: isHeadline ? 13 : 12,
           lineHeight: '18px',
-          color: isButton ? PRIMARY_TEXT : isHeadline ? '#ffffff' : 'rgba(255,255,255,0.55)',
+          color: isButton ? PRIMARY_TEXT : isHeadline ? '#000000' : '#666666',
           fontWeight: isHeadline ? W_MEDIUM : W_REGULAR,
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          border: `1px solid rgba(255,255,255,0.2)`,
+          backgroundColor: '#f5f5f5',
+          border: `1px solid #d5d5d5`,
           borderRadius: 4,
           padding: '2px 6px',
           outline: 'none',
@@ -2800,10 +2800,10 @@ function EditableField({
         fontFamily: FONT,
         fontSize: isButton ? 12 : 13,
         lineHeight: '18px',
-        color: isButton ? PRIMARY_TEXT : isHeadline ? '#ffffff' : 'rgba(255,255,255,0.55)',
+        color: isButton ? PRIMARY_TEXT : isHeadline ? '#000000' : '#666666',
         fontWeight: isHeadline || isButton ? W_MEDIUM : W_REGULAR,
         cursor: 'text',
-        borderBottom: '1px dashed rgba(255,255,255,0.15)',
+        borderBottom: '1px dashed #d5d5d5',
         paddingBottom: 1,
         ...(isButton ? { backgroundColor: 'rgba(230, 80, 44, 0.1)', padding: '1px 8px', borderRadius: 4, borderBottom: 'none' } : {}),
       }}
@@ -2879,10 +2879,10 @@ function CopyReferenceModal({
         style={{
           width: '100%',
           maxWidth: 960,
-          backgroundColor: '#1c1c1e',
+          backgroundColor: '#ffffff',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          border: '1px solid #d5d5d5',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.15)',
           overflow: 'hidden',
         }}
       >
@@ -2892,10 +2892,10 @@ function CopyReferenceModal({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '24px 32px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid #d5d5d5',
           position: 'sticky',
           top: 0,
-          backgroundColor: '#1c1c1e',
+          backgroundColor: '#ffffff',
           zIndex: 10,
         }}>
           <div>
@@ -2903,7 +2903,7 @@ function CopyReferenceModal({
               fontFamily: FONT_DISPLAY,
               fontWeight: W_MEDIUM,
               fontSize: 20,
-              color: '#f0f0f0',
+              color: '#000000',
               margin: 0,
               letterSpacing: '-0.2px',
             }}>
@@ -2912,7 +2912,7 @@ function CopyReferenceModal({
             <p style={{
               fontFamily: FONT,
               fontSize: 13,
-              color: 'rgba(255,255,255,0.4)',
+              color: '#666666',
               margin: 0,
               marginTop: 4,
             }}>
@@ -2927,9 +2927,9 @@ function CopyReferenceModal({
                   fontFamily: FONT,
                   fontWeight: W_MEDIUM,
                   fontSize: 12,
-                  color: 'rgba(255,255,255,0.5)',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#666666',
+                  background: '#efefef',
+                  border: '1px solid #d5d5d5',
                   borderRadius: 6,
                   padding: '6px 12px',
                   cursor: 'pointer',
@@ -2947,10 +2947,10 @@ function CopyReferenceModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(255,255,255,0.06)',
+                background: '#efefef',
                 border: 'none',
                 borderRadius: 8,
-                color: 'rgba(255,255,255,0.5)',
+                color: '#666666',
                 cursor: 'pointer',
                 fontSize: 18,
                 fontFamily: FONT,
@@ -2976,7 +2976,7 @@ function CopyReferenceModal({
                     fontFamily: FONT,
                     fontWeight: W_MEDIUM,
                     fontSize: 14,
-                    color: '#f0f0f0',
+                    color: '#000000',
                   }}>
                     {title}
                   </span>
@@ -2997,21 +2997,21 @@ function CopyReferenceModal({
                 {/* Entries */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {entries.map((entry) => {
-                    const badgeStyle = variantBadgeColors[entry.variant] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }
+                    const badgeStyle = variantBadgeColors[entry.variant] || { bg: '#efefef', color: '#666666' }
                     return (
                       <div
                         key={`${entry.network}-${entry.plan}-${entry.variant}`}
                         style={{
                           display: 'grid',
                           gridTemplateColumns: '180px 1fr',
-                          backgroundColor: 'rgba(255,255,255,0.02)',
+                          backgroundColor: '#f5f5f5',
                           borderRadius: 10,
                           padding: '14px 18px',
                           gap: 16,
                           transition: 'background 0.15s ease',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#efefef' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5' }}
                       >
                         {/* Left: Variant badge */}
                         <div>
@@ -3033,7 +3033,7 @@ function CopyReferenceModal({
                                 fontFamily: FONT,
                                 fontWeight: W_MEDIUM,
                                 fontSize: 10,
-                                color: 'rgba(255,255,255,0.25)',
+                                color: '#666666',
                                 textTransform: 'uppercase' as const,
                                 letterSpacing: '0.5px',
                                 display: 'block',
@@ -3057,7 +3057,7 @@ function CopyReferenceModal({
                               fontFamily: FONT,
                               fontWeight: W_MEDIUM,
                               fontSize: 10,
-                              color: 'rgba(255,255,255,0.25)',
+                              color: '#666666',
                               textTransform: 'uppercase' as const,
                               letterSpacing: '0.5px',
                               width: 64,
@@ -3080,7 +3080,7 @@ function CopyReferenceModal({
                                 fontFamily: FONT,
                                 fontWeight: W_MEDIUM,
                                 fontSize: 10,
-                                color: 'rgba(255,255,255,0.25)',
+                                color: '#666666',
                                 textTransform: 'uppercase' as const,
                                 letterSpacing: '0.5px',
                                 width: 64,
@@ -3103,7 +3103,7 @@ function CopyReferenceModal({
                                 fontFamily: FONT,
                                 fontWeight: W_MEDIUM,
                                 fontSize: 10,
-                                color: 'rgba(255,255,255,0.25)',
+                                color: '#666666',
                                 textTransform: 'uppercase' as const,
                                 letterSpacing: '0.5px',
                                 width: 64,
@@ -3176,7 +3176,7 @@ export function SearchResultsPage() {
     <div
       style={{
         height: '100vh',
-        backgroundColor: '#111111',
+        backgroundColor: '#f5f5f5',
         display: 'flex',
         overflow: 'hidden',
       }}
@@ -3186,8 +3186,8 @@ export function SearchResultsPage() {
         style={{
           width: 240,
           flexShrink: 0,
-          backgroundColor: '#161616',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
+          backgroundColor: '#ffffff',
+          borderRight: '1px solid #d5d5d5',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -3199,7 +3199,7 @@ export function SearchResultsPage() {
             fontFamily: FONT_DISPLAY,
             fontWeight: W_MEDIUM,
             fontSize: 15,
-            color: 'rgba(255,255,255,0.7)',
+            color: '#000000',
             margin: 0,
             letterSpacing: '-0.1px',
           }}>
@@ -3230,7 +3230,7 @@ export function SearchResultsPage() {
                     fontFamily: FONT,
                     fontWeight: W_MEDIUM,
                     fontSize: 11,
-                    color: isNetworkActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)',
+                    color: isNetworkActive ? '#000000' : '#666666',
                     textTransform: 'uppercase' as const,
                     letterSpacing: '0.8px',
                     backgroundColor: 'transparent',
@@ -3243,7 +3243,7 @@ export function SearchResultsPage() {
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    backgroundColor: isNetworkActive ? PRIMARY_TEXT : 'rgba(255,255,255,0.15)',
+                    backgroundColor: isNetworkActive ? PRIMARY_TEXT : '#d5d5d5',
                     flexShrink: 0,
                   }} />
                   {nt.label}
@@ -3287,7 +3287,7 @@ export function SearchResultsPage() {
         {/* Sidebar footer */}
         <div style={{
           padding: '12px 8px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid #d5d5d5',
           flexShrink: 0,
         }}>
           <button
@@ -3300,9 +3300,9 @@ export function SearchResultsPage() {
               fontFamily: FONT,
               fontWeight: W_MEDIUM,
               fontSize: 12,
-              color: 'rgba(255,255,255,0.4)',
-              backgroundColor: 'transparent',
-              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#666666',
+              backgroundColor: '#f5f5f5',
+              border: '1px solid #d5d5d5',
               borderRadius: 8,
               padding: '8px 12px',
               cursor: 'pointer',
@@ -3334,19 +3334,19 @@ export function SearchResultsPage() {
           <div style={{
             fontFamily: FONT,
             fontSize: 12,
-            color: 'rgba(255,255,255,0.25)',
+            color: '#666666',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
             marginBottom: 16,
           }}>
             <span>{networkType === 'single' ? 'Single Network' : 'Multi Network'}</span>
-            <span style={{ color: 'rgba(255,255,255,0.12)' }}>/</span>
+            <span style={{ color: '#d5d5d5' }}>/</span>
             <span>{config.tabLabel}</span>
             {activeSub && (
               <>
-                <span style={{ color: 'rgba(255,255,255,0.12)' }}>/</span>
-                <span style={{ color: 'rgba(255,255,255,0.45)' }}>{activeSub.subtitle}</span>
+                <span style={{ color: '#d5d5d5' }}>/</span>
+                <span style={{ color: '#666666' }}>{activeSub.subtitle}</span>
               </>
             )}
           </div>
@@ -3357,7 +3357,7 @@ export function SearchResultsPage() {
             fontWeight: W_MEDIUM,
             fontSize: 26,
             lineHeight: '32px',
-            color: '#f0f0f0',
+            color: '#000000',
             margin: 0,
             letterSpacing: '-0.3px',
           }}>
@@ -3370,7 +3370,7 @@ export function SearchResultsPage() {
             fontWeight: W_REGULAR,
             fontSize: 15,
             lineHeight: '23px',
-            color: 'rgba(255,255,255,0.5)',
+            color: '#666666',
             marginTop: 16,
             marginBottom: 0,
           }}>
@@ -3382,7 +3382,7 @@ export function SearchResultsPage() {
             {(activeSub ? activeSub.highlights : config.highlights).map((h, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <span style={{ color: PRIMARY_TEXT, fontSize: 7, lineHeight: '21px', flexShrink: 0 }}>●</span>
-                <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '21px', color: 'rgba(255,255,255,0.38)' }}>
+                <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '21px', color: '#666666' }}>
                   {h}
                 </span>
               </div>
