@@ -18,6 +18,10 @@ import LocationIcon from '@glow-icons/icons/line/Location'
 import VideoCameraIcon from '@glow-icons/icons/line/VideoCamera'
 import HeartLineIcon from '@glow-icons/icons/line/Heart'
 import HeartSolidIcon from '@glow-icons/icons/solid/Heart'
+import BookmarkLineIcon from '@glow-icons/icons/line/Bookmark'
+import BookmarkSolidIcon from '@glow-icons/icons/solid/Bookmark'
+import CalendarIcon from '@glow-icons/icons/line/Calendar'
+import StarLineIcon from '@glow-icons/icons/line/Star'
 import ArrowDownLeftCrFrIcon from '@glow-icons/icons/solid/ArrowDownLeftCrFr'
 import ArrowUpRightCrFrIcon from '@glow-icons/icons/solid/ArrowUpRightCrFr'
 
@@ -2084,7 +2088,7 @@ function ProviderCard({
         overflow: 'hidden',
       }}
     >
-      {/* Provider Info */}
+      {/* Provider Header */}
       <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XS}px` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: SPACE_XXS }}>
           <div
@@ -2122,128 +2126,129 @@ function ProviderCard({
             <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT, marginTop: 2 }}>
               {provider.specialty}
             </p>
-            <p style={{
-              fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT,
-              marginTop: SPACE_XXXS, textDecoration: 'underline',
-            }}>
-              {provider.address}
-            </p>
 
             {/* Network tag */}
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXXS, marginTop: SPACE_XXS }}>
               <CoinIcon backColor={tierColor.back} frontColor={tierColor.front} />
-              <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, color: TEXT_DEFAULT }}>
+              <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, color: TEXT_DEFAULT }}>
                 {provider.networkName ? `${provider.networkName} · ` : ''}{provider.networkLabel}
               </span>
             </div>
           </div>
 
-          {/* Favorite button */}
+          {/* Bookmark button */}
           <button
             onClick={() => setIsFaved(!isFaved)}
             style={{
-              background: isFaved ? 'transparent' : BG_EXTRA_SUBTLE,
+              background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              width: 42,
-              height: 42,
-              borderRadius: RADIUS_FULL,
+              width: 36,
+              height: 36,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'all 0.2s ease',
             }}
-            aria-label={isFaved ? 'Remove from favorites' : 'Save to favorites'}
+            aria-label={isFaved ? 'Remove from saved' : 'Save provider'}
           >
-            <span style={{ color: isFaved ? PRIMARY_TEXT : BORDER_STRONG, display: 'flex' }}>
-              {isFaved ? <HeartSolidIcon size="md" /> : <HeartLineIcon size="md" />}
+            <span style={{ color: isFaved ? TEXT_DEFAULT : TEXT_DARK, display: 'flex' }}>
+              {isFaved ? <BookmarkSolidIcon size="md" /> : <BookmarkLineIcon size="md" />}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Stats Bar — 3 columns with dividers */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          borderTop: `1px solid ${BORDER_LIGHT}`,
-          borderBottom: `1px solid ${BORDER_LIGHT}`,
-          padding: `${SPACE_XS}px 0`,
-        }}
-      >
-        <StatColumn icon={<span style={{ color: '#ffd129' }}><StarSolidIcon size="sm" /></span>} label={`${provider.rating}/5 (${provider.reviews})`} />
-        <div style={{ width: 1, height: 32, backgroundColor: BORDER_LIGHT }} />
-        <StatColumn icon={<span style={{ color: TEXT_DARK }}><LocationIcon size="sm" /></span>} label={provider.distance} />
-        <div style={{ width: 1, height: 32, backgroundColor: BORDER_LIGHT }} />
-        {provider.virtual ? (
-          <StatColumn icon={<span style={{ color: TEXT_DARK }}><VideoCameraIcon size="sm" /></span>} label="Virtual visit" />
-        ) : (
-          <StatColumn icon={<span style={{ color: TEXT_DARK }}><VideoCameraIcon size="sm" /></span>} label="In-person" />
-        )}
+      {/* Divider */}
+      <div style={{ height: 1, backgroundColor: BORDER_LIGHT, margin: `0 ${SPACE_S}px` }} />
+
+      {/* Details List */}
+      <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px`, display: 'flex', flexDirection: 'column', gap: SPACE_XS }}>
+        {/* Distance + Address */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
+          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><LocationIcon size="sm" /></span>
+          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
+            {provider.distance} - {provider.address}
+          </span>
+        </div>
+        {/* Rating */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
+          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><StarLineIcon size="sm" /></span>
+          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
+            {provider.rating}/5 ({provider.reviews})
+          </span>
+        </div>
+        {/* Appointment */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
+          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><CalendarIcon size="sm" /></span>
+          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
+            {provider.nextApptLabel}{' '}
+            <strong style={{ fontWeight: W_MEDIUM }}>{provider.nextApptDate}</strong>
+          </span>
+        </div>
       </div>
 
       {/* Price Section */}
-      {showPrice && (<div style={{ padding: `${SPACE_XS}px ${SPACE_S}px` }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {showCostChip && chip ? (
-            <div>
-              <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
-                {provider.cost}
-              </span>
-              <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK, marginTop: 2 }}>
-                {costLabel}
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE_XXS }}>
-              <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
-                {provider.cost}
-              </span>
-              <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
-                {costLabel}
-              </span>
-            </div>
-          )}
+      {showPrice && (
+        <>
+          <div style={{ height: 1, backgroundColor: BORDER_LIGHT, margin: `0 ${SPACE_S}px` }} />
+          <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {showCostChip && chip ? (
+                <div>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
+                    {provider.cost}
+                  </span>
+                  <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK, marginTop: 2 }}>
+                    {costLabel}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE_XXS }}>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
+                    {provider.cost}
+                  </span>
+                  <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
+                    {costLabel}
+                  </span>
+                </div>
+              )}
 
-          {/* Cost chip */}
-          {showCostChip && chip && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACE_XXXS,
-                backgroundColor: chip.bg,
-                borderRadius: RADIUS_FULL,
-                padding: `${SPACE_XXXS}px ${SPACE_XXS}px`,
-                color: chip.color,
-              }}
-            >
-              {chip.Icon && <chip.Icon size="xs" />}
-              <span
-                style={{
-                  fontFamily: FONT,
-                  fontWeight: W_MEDIUM,
-                  fontSize: 14,
-                  lineHeight: '18px',
-                }}
-              >
-                {chip.label}
-              </span>
+              {/* Cost chip */}
+              {showCostChip && chip && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE_XXXS,
+                    backgroundColor: chip.bg,
+                    borderRadius: RADIUS_FULL,
+                    padding: `${SPACE_XXXS}px ${SPACE_XXS}px`,
+                    color: chip.color,
+                  }}
+                >
+                  {chip.Icon && <chip.Icon size="xs" />}
+                  <span
+                    style={{
+                      fontFamily: FONT,
+                      fontWeight: W_MEDIUM,
+                      fontSize: 14,
+                      lineHeight: '18px',
+                    }}
+                  >
+                    {chip.label}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>)}
+          </div>
+        </>
+      )}
 
-      {/* Appointment + Actions */}
-      <div style={{ padding: `0 ${SPACE_S}px ${SPACE_S}px`, borderTop: `1px solid ${BORDER_LIGHT}`, paddingTop: SPACE_S }}>
-        <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
-          {provider.nextApptLabel}{' '}
-          <strong style={{ fontWeight: W_MEDIUM }}>{provider.nextApptDate}</strong>
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_XS, marginTop: SPACE_S }}>
+      {/* Action Buttons */}
+      <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px ${SPACE_S}px` }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_XS }}>
           <Button variant="outline" size="sm" fullWidth>
             Call
           </Button>
