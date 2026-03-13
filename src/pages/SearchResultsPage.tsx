@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Button, TextInput } from 'glow-ds/components'
+import { useState, useEffect, useCallback } from 'react'
+import { Button, TextInput, ProviderCard as DSProviderCard } from 'glow-ds/components'
+import type { NetworkTier } from 'glow-ds/components'
 import {
   semanticColors as sc,
   semanticSpacing,
@@ -22,8 +23,21 @@ import BookmarkLineIcon from '@glow-icons/icons/line/Bookmark'
 import BookmarkSolidIcon from '@glow-icons/icons/solid/Bookmark'
 import CalendarIcon from '@glow-icons/icons/line/Calendar'
 import StarLineIcon from '@glow-icons/icons/line/Star'
-import ArrowDownLeftCrFrIcon from '@glow-icons/icons/solid/ArrowDownLeftCrFr'
-import ArrowUpRightCrFrIcon from '@glow-icons/icons/solid/ArrowUpRightCrFr'
+// ArrowDownLeftCrFr / ArrowUpRightCrFr removed — cost chips now handled by DS ProviderCard
+import SearchIcon from '@glow-icons/icons/line/Search'
+import Clock16Icon from '@glow-icons/icons/line/Clock16'
+import ChevronSmallLeftIcon from '@glow-icons/icons/line/ChevronSmallLeft'
+import PhoneIcon from '@glow-icons/icons/line/Phone'
+import ChevronLeftIcon from '@glow-icons/icons/line/ChevronLeft'
+
+// ── Specialty Icons ──────────────────────────────────────────
+import PrimaryCareIcon from '@glow-icons/icons/specialty/PrimaryCare'
+import DentistIcon from '@glow-icons/icons/specialty/Dentist'
+import EyeDoctorIcon from '@glow-icons/icons/specialty/EyeDoctor'
+import ObGynIcon from '@glow-icons/icons/specialty/ObGyn'
+import DermatologyIcon from '@glow-icons/icons/specialty/Dermatology'
+import SpecialistIcon from '@glow-icons/icons/specialty/Specialist'
+import OrthopedistIcon from '@glow-icons/icons/specialty/Orthopedist'
 
 // ── DS Token Constants ──────────────────────────────────────
 
@@ -66,30 +80,10 @@ const FONT_DISPLAY = fontFamilies.display  // Tiempos Headline
 const W_REGULAR = fontWeights.regular      // 400
 const W_MEDIUM = fontWeights.medium        // 500
 
-// ── Network tier colors ─────────────────────────────────────
-const TIER_COLORS = {
-  'in-network': { back: '#C2E5C3', front: '#5BB95E' },
-  'tier-2': { back: '#FFE78F', front: '#F5C000' },
-  'tier-3': { back: '#E0D4F5', front: '#9B7ED8' },
-  'out-of-network': { back: '#FAB3B3', front: '#F23C3C' },
-} as const
+// ── Network tier type (from DS) ─────────────────────────────
+type NetworkKey = NetworkTier
 
-// ── Custom Icons (not available in DS) ──────────────────────
-
-const COIN_PATH = 'M0 5.96C0 9.25 2.67 11.92 5.96 11.92C9.25 11.92 11.92 9.25 11.92 5.96C11.92 2.67 9.25 0 5.96 0C2.67 0 0 2.67 0 5.96Z'
-
-function CoinIcon({ backColor, frontColor }: { backColor: string; frontColor: string }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <g transform="translate(2.5, 1.1)">
-        <path d={COIN_PATH} fill={backColor} />
-      </g>
-      <g transform="translate(5.6, 6.7)">
-        <path d={COIN_PATH} fill={frontColor} />
-      </g>
-    </svg>
-  )
-}
+// ── Custom Icons (CoinIcon removed — now handled by DS ProviderCard) ──
 
 // ── Provider Data ───────────────────────────────────────────
 
@@ -103,7 +97,7 @@ interface Provider {
   reviews: number
   distance: string
   virtual: boolean
-  networkKey: keyof typeof TIER_COLORS
+  networkKey: NetworkKey
   networkName: string
   networkLabel: string
   cost: string
@@ -114,11 +108,7 @@ interface Provider {
   initials: string
 }
 
-const COST_CHIP_CONFIG: Record<CostLevel, { label: string; bg: string; color: string; Icon: typeof ArrowDownLeftCrFrIcon | null }> = {
-  lower:   { label: 'Lower cost',   bg: SUCCESS_SUBTLE,  color: SUCCESS_TEXT_DARK, Icon: ArrowDownLeftCrFrIcon },
-  typical: { label: 'Typical cost',  bg: BLUE_SUBTLE,     color: BLUE_TEXT_DARK,    Icon: null },
-  higher:  { label: 'Higher cost',   bg: ERROR_SUBTLE,    color: ERROR_TEXT_DARK,   Icon: ArrowUpRightCrFrIcon },
-}
+// COST_CHIP_CONFIG removed — now handled by DS ProviderCard
 
 // ── Use Case Configuration ──────────────────────────────────
 
@@ -149,7 +139,7 @@ interface BannerCopyEntry {
 const INITIAL_BANNER_COPY: BannerCopyEntry[] = [
   // ── Single Network · Connected ──
   { network: 'single', plan: 'connected', variant: 'coinsurance',
-    headline: 'Most providers in this area charge $1,400–$2,200' },
+    headline: 'Most people pay $1,400–$2,200 for this service in this area' },
   { network: 'single', plan: 'connected', variant: 'copay',
     headline: 'You\'ll pay $50 per visit' },
   { network: 'single', plan: 'connected', variant: 'procedure-before',
@@ -157,7 +147,7 @@ const INITIAL_BANNER_COPY: BannerCopyEntry[] = [
     subtitle: 'Your plan covers 40% coinsurance for MRI procedures. Prices vary by type.',
     button: 'Choose MRI type' },
   { network: 'single', plan: 'connected', variant: 'procedure-after',
-    headline: 'Most providers in this area charge {price} for {procedure}' },
+    headline: 'Most people pay {price} for {procedure} in this area' },
   { network: 'single', plan: 'connected', variant: 'same-price',
     headline: 'Your estimated cost is $1,400',
     subtitle: 'Based on your plan\'s coinsurance rate' },
@@ -183,7 +173,7 @@ const INITIAL_BANNER_COPY: BannerCopyEntry[] = [
   // ── Multi Network · Connected ──
   { network: 'multi', plan: 'connected', variant: 'coinsurance',
     label: 'All in-network providers',
-    headline: 'Most providers in this area charge $1,400–$2,200' },
+    headline: 'Most people pay $1,400–$2,200 for this service in this area' },
   { network: 'multi', plan: 'connected', variant: 'copay',
     label: 'All in-network providers',
     headline: 'You\'ll pay $30–$75 per visit' },
@@ -194,7 +184,7 @@ const INITIAL_BANNER_COPY: BannerCopyEntry[] = [
     button: 'Choose MRI type' },
   { network: 'multi', plan: 'connected', variant: 'procedure-after',
     label: 'All in-network providers',
-    headline: 'Most providers in this area charge {price} for {procedure}' },
+    headline: 'Most people pay {price} for {procedure} in this area' },
 
   // ── Multi Network · Not Connected ──
   { network: 'multi', plan: 'not-connected', variant: 'coinsurance',
@@ -1544,6 +1534,16 @@ function RenderSubtitle({ text }: { text: string }) {
 // ── Price Range Bar (Co-Insurance) ──────────────────────────
 
 function PriceRangeBar({ copy }: { copy: BannerCopyEntry }) {
+  // Parse price range from headline (e.g. "$185–$310" or "$1,400–$2,200")
+  const priceMatch = copy.headline.match(/\$([\d,]+)[–-]\$([\d,]+)/)
+  const lo = priceMatch ? parseDollar(`$${priceMatch[1]}`) : 1400
+  const hi = priceMatch ? parseDollar(`$${priceMatch[2]}`) : 2200
+  // Compute sensible min/max for the bar (padding on each side)
+  const range = hi - lo || 1
+  const min = Math.max(0, Math.round(lo - range * 0.6))
+  const max = Math.round(hi + range * 0.8)
+  const formatPrice = (n: number) => `$${n.toLocaleString()}`
+
   return (
     <div>
       {copy.label && (
@@ -1557,10 +1557,9 @@ function PriceRangeBar({ copy }: { copy: BannerCopyEntry }) {
 
       {/* Price bar — proportional to actual price positions */}
       {(() => {
-        const min = 1000, max = 4200, lo = 1400, hi = 2200
-        const leftFlex = lo - min       // 400
-        const midFlex = hi - lo         // 800
-        const rightFlex = max - hi      // 2000
+        const leftFlex = lo - min
+        const midFlex = hi - lo
+        const rightFlex = max - hi
         const leftMarker = `${((lo - min) / (max - min)) * 100}%`
         const rightMarker = `${((hi - min) / (max - min)) * 100}%`
         return (
@@ -1578,8 +1577,8 @@ function PriceRangeBar({ copy }: { copy: BannerCopyEntry }) {
 
       {/* Min/Max labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: SPACE_XXXS }}>
-        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>$1,000</span>
-        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>$4,200</span>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>{formatPrice(min)}</span>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_DARK }}>{formatPrice(max)}</span>
       </div>
     </div>
   )
@@ -2062,202 +2061,44 @@ function ProcedurePickerBannerContent({
   )
 }
 
-// ── Provider Card ───────────────────────────────────────────
+// ── Provider Card (adapter → DS ProviderCard) ──────────────
 
 function ProviderCard({
   provider,
   showCostChip = true,
   showPrice = true,
   costLabel = 'est. out-of-pocket',
+  onClick,
 }: {
   provider: Provider
   showCostChip?: boolean
   showPrice?: boolean
   costLabel?: string
+  onClick?: () => void
 }) {
-  const tierColor = TIER_COLORS[provider.networkKey]
-  const chip = COST_CHIP_CONFIG[provider.costLevel]
-  const [isFaved, setIsFaved] = useState(false)
-
   return (
-    <div
-      style={{
-        backgroundColor: BG_WHITE,
-        borderRadius: RADIUS_S,
-        border: `1px solid ${BORDER_LIGHT}`,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Provider Header */}
-      <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XS}px` }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: SPACE_XXS }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: RADIUS_FULL,
-              backgroundColor: BG_EXTRA_SUBTLE,
-              overflow: 'hidden',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <img
-              src={provider.photo}
-              alt={provider.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none'
-                ;(e.target as HTMLImageElement).parentElement!.innerHTML =
-                  `<span style="font-family:${FONT};font-weight:${W_MEDIUM};font-size:16px;color:${TEXT_DARK}">${provider.initials}</span>`
-              }}
-            />
-          </div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{
-              fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {provider.name}
-            </p>
-            <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT, marginTop: 2 }}>
-              {provider.specialty}
-            </p>
-
-            {/* Network tag */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXXS, marginTop: SPACE_XXS }}>
-              <CoinIcon backColor={tierColor.back} frontColor={tierColor.front} />
-              <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, color: TEXT_DEFAULT }}>
-                {provider.networkName ? `${provider.networkName} · ` : ''}{provider.networkLabel}
-              </span>
-            </div>
-          </div>
-
-          {/* Bookmark button */}
-          <button
-            onClick={() => setIsFaved(!isFaved)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              width: 36,
-              height: 36,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              transition: 'all 0.2s ease',
-            }}
-            aria-label={isFaved ? 'Remove from saved' : 'Save provider'}
-          >
-            <span style={{ color: isFaved ? TEXT_DEFAULT : TEXT_DARK, display: 'flex' }}>
-              {isFaved ? <BookmarkSolidIcon size="md" /> : <BookmarkLineIcon size="md" />}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div style={{ height: 1, backgroundColor: BORDER_LIGHT, margin: `0 ${SPACE_S}px` }} />
-
-      {/* Details List */}
-      <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px`, display: 'flex', flexDirection: 'column', gap: SPACE_XS }}>
-        {/* Distance + Address */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
-          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><LocationIcon size="sm" /></span>
-          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
-            {provider.distance} - {provider.address}
-          </span>
-        </div>
-        {/* Rating */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
-          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><StarLineIcon size="sm" /></span>
-          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
-            {provider.rating}/5 ({provider.reviews})
-          </span>
-        </div>
-        {/* Appointment */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE_XXS }}>
-          <span style={{ color: TEXT_DARK, display: 'flex', flexShrink: 0 }}><CalendarIcon size="sm" /></span>
-          <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT }}>
-            {provider.nextApptLabel}{' '}
-            <strong style={{ fontWeight: W_MEDIUM }}>{provider.nextApptDate}</strong>
-          </span>
-        </div>
-      </div>
-
-      {/* Price Section */}
-      {showPrice && (
-        <>
-          <div style={{ height: 1, backgroundColor: BORDER_LIGHT, margin: `0 ${SPACE_S}px` }} />
-          <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {showCostChip && chip ? (
-                <div>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
-                    {provider.cost}
-                  </span>
-                  <p style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK, marginTop: 2 }}>
-                    {costLabel}
-                  </p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE_XXS }}>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
-                    {provider.cost}
-                  </span>
-                  <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
-                    {costLabel}
-                  </span>
-                </div>
-              )}
-
-              {/* Cost chip */}
-              {showCostChip && chip && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE_XXXS,
-                    backgroundColor: chip.bg,
-                    borderRadius: RADIUS_FULL,
-                    padding: `${SPACE_XXXS}px ${SPACE_XXS}px`,
-                    color: chip.color,
-                  }}
-                >
-                  {chip.Icon && <chip.Icon size="xs" />}
-                  <span
-                    style={{
-                      fontFamily: FONT,
-                      fontWeight: W_MEDIUM,
-                      fontSize: 14,
-                      lineHeight: '18px',
-                    }}
-                  >
-                    {chip.label}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Action Buttons */}
-      <div style={{ padding: `${SPACE_XS}px ${SPACE_S}px ${SPACE_S}px` }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_XS }}>
-          <Button variant="outline" size="sm" fullWidth>
-            Call
-          </Button>
-          <Button variant="secondary" size="sm" fullWidth>
-            Book
-          </Button>
-        </div>
-      </div>
-    </div>
+    <DSProviderCard
+      name={provider.name}
+      specialty={provider.specialty}
+      photoUrl={provider.photo}
+      address={provider.address}
+      distance={provider.distance}
+      rating={provider.rating}
+      reviewCount={provider.reviews}
+      networkTier={provider.networkKey}
+      networkName={provider.networkName}
+      networkLabel={provider.networkLabel}
+      cost={provider.cost}
+      costLevel={provider.costLevel}
+      costLabel={costLabel}
+      showCostChip={showCostChip}
+      showPrice={showPrice}
+      nextAppointmentLabel={provider.nextApptLabel}
+      nextAppointmentDate={provider.nextApptDate}
+      onCallClick={() => {}}
+      onBookClick={() => {}}
+      onClick={onClick}
+    />
   )
 }
 
@@ -2272,6 +2113,8 @@ function ScreenContent({
   isLoading = false,
   multiNetwork = false,
   bannerCopy,
+  onProviderClick,
+  usePriceBarV2,
 }: {
   config: UseCaseConfig
   subVariant?: string
@@ -2281,6 +2124,8 @@ function ScreenContent({
   isLoading?: boolean
   multiNetwork?: boolean
   bannerCopy: BannerCopyEntry[]
+  onProviderClick?: (provider: Provider) => void
+  usePriceBarV2?: { leftFraction: number; min: string; max: string }
 }) {
   const networkKey: NetworkType = multiNetwork ? 'multi' : 'single'
   const planKey: PlanType = config.id
@@ -2477,7 +2322,29 @@ function ScreenContent({
         >
           {effectiveBannerType === 'price-range' && (() => {
             const copy = findBannerCopy(bannerCopy, networkKey, planKey, 'coinsurance')
-            return copy ? <PriceRangeBar copy={copy} /> : null
+            if (!copy) return null
+            // Always use V2 — compute position from headline if not explicitly provided
+            const v2Props = usePriceBarV2 || (() => {
+              const m = copy.headline.match(/\$([\d,]+)[–-]\$([\d,]+)/)
+              if (!m) return { leftFraction: 0.111, min: '$100', max: '$22,200' }
+              const lo = parseDollar(`$${m[1]}`)
+              const hi = parseDollar(`$${m[2]}`)
+              const { leftFraction } = calcPriceBarPosition(lo, hi, 100, 22200)
+              return { leftFraction, min: '$100', max: '$22,200' }
+            })()
+            return (
+              <div>
+                {copy.label && (
+                  <p style={{ margin: 0, marginBottom: SPACE_XXS, fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 14, lineHeight: '17px', color: TEXT_DARK }}>
+                    {copy.label}
+                  </p>
+                )}
+                <p style={{ margin: '0 0 16px' }}>
+                  <RenderHeadline text={copy.headline} />
+                </p>
+                <PriceRangeBarV2 {...v2Props} />
+              </div>
+            )
           })()}
           {effectiveBannerType === 'same-price' && (() => {
             const copy = findBannerCopy(bannerCopy, networkKey, planKey, 'same-price')
@@ -2565,6 +2432,7 @@ function ScreenContent({
             showCostChip={showCostChips}
             showPrice={showPrice}
             costLabel={costLabel}
+            onClick={onProviderClick ? () => onProviderClick(p) : undefined}
           />
         ))}
       </div>
@@ -3138,6 +3006,1601 @@ function CopyReferenceModal({
   )
 }
 
+// ── Demo Flow: Search Screen ────────────────────────────────
+
+// ── Demo Flow: Orthopedist Copay-specific data ───────────────
+
+const DEMO_ORTHO_PROVIDERS: Provider[] = [
+  {
+    name: 'Dr. David Hoffman',
+    specialty: 'Orthopedist',
+    address: '520 E 70th St, New York, NY',
+    rating: 4.9,
+    reviews: 487,
+    distance: '0.6 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$45',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop',
+    initials: 'DH',
+  },
+  {
+    name: 'Dr. Maria Santos',
+    specialty: 'Orthopedist',
+    address: '333 E 38th St, New York, NY',
+    rating: 4.7,
+    reviews: 312,
+    distance: '1.0 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$45',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1594824476967-48c8b964ac31?w=100&h=100&fit=crop',
+    initials: 'MS',
+  },
+  {
+    name: 'Dr. Kevin Patel',
+    specialty: 'Orthopedist',
+    address: '1190 Fifth Ave, New York, NY',
+    rating: 4.6,
+    reviews: 245,
+    distance: '1.5 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$45',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Tomorrow, May 8',
+    photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop',
+    initials: 'KP',
+  },
+  {
+    name: 'Dr. Rachel Nguyen',
+    specialty: 'Orthopedist',
+    address: '245 W 47th St, New York, NY',
+    rating: 4.5,
+    reviews: 198,
+    distance: '1.8 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$45',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Thu, May 8',
+    photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop',
+    initials: 'RN',
+  },
+  {
+    name: 'Dr. Anthony Brooks',
+    specialty: 'Orthopedist',
+    address: '10 Union Square E, New York, NY',
+    rating: 4.4,
+    reviews: 176,
+    distance: '2.3 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$45',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Fri, May 9',
+    photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=100&h=100&fit=crop',
+    initials: 'AB',
+  },
+]
+
+// ── Demo Flow: Retinal Imaging-specific data ─────────────────
+
+const DEMO_RETINAL_PROVIDERS: Provider[] = [
+  {
+    name: 'Dr. Emily Park',
+    specialty: 'Ophthalmologist',
+    address: '133 E 58th St, New York, NY',
+    rating: 4.9,
+    reviews: 412,
+    distance: '0.5 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$72',
+    costLevel: 'lower',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1594824476967-48c8b964ac31?w=100&h=100&fit=crop',
+    initials: 'EP',
+  },
+  {
+    name: 'Manhattan Eye Center',
+    specialty: 'Retinal imaging center',
+    address: '30 E 40th St, New York, NY',
+    rating: 4.6,
+    reviews: 287,
+    distance: '0.9 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$95',
+    costLevel: 'lower',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?w=100&h=100&fit=crop',
+    initials: 'ME',
+  },
+  {
+    name: 'Dr. Michael Torres',
+    specialty: 'Ophthalmologist',
+    address: '1000 Park Ave, New York, NY',
+    rating: 4.7,
+    reviews: 339,
+    distance: '1.3 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$155',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Tomorrow, May 8',
+    photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop',
+    initials: 'MT',
+  },
+  {
+    name: 'Dr. Lisa Wang',
+    specialty: 'Ophthalmologist',
+    address: '234 W 56th St, New York, NY',
+    rating: 4.5,
+    reviews: 198,
+    distance: '1.6 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$185',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Thu, May 8',
+    photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop',
+    initials: 'LW',
+  },
+  {
+    name: 'NYC Vision Diagnostics',
+    specialty: 'Ophthalmology clinic',
+    address: '485 Madison Ave, New York, NY',
+    rating: 4.4,
+    reviews: 221,
+    distance: '1.9 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$198',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Fri, May 9',
+    photo: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=100&h=100&fit=crop',
+    initials: 'NV',
+  },
+  {
+    name: 'Dr. Robert Kim',
+    specialty: 'Ophthalmologist',
+    address: '161 Madison Ave, New York, NY',
+    rating: 4.3,
+    reviews: 156,
+    distance: '2.2 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$210',
+    costLevel: 'higher',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Mon, May 12',
+    photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=100&h=100&fit=crop',
+    initials: 'RK',
+  },
+]
+
+// ── Demo Flow: MRI-specific data ─────────────────────────────
+
+const DEMO_MAMMOGRAPHY_PROVIDERS: Provider[] = [
+  {
+    name: 'CityMed Diagnostics',
+    specialty: 'MRI & imaging facility',
+    address: '220 E 42nd St, New York, NY',
+    rating: 4.5,
+    reviews: 318,
+    distance: '1.1 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$380',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=100&h=100&fit=crop',
+    initials: 'CD',
+  },
+  {
+    name: 'Mount Sinai Radiology',
+    specialty: 'Radiology & imaging',
+    address: '5 E 98th St, New York, NY',
+    rating: 4.6,
+    reviews: 389,
+    distance: '1.4 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$425',
+    costLevel: 'typical',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Tomorrow, May 8',
+    photo: 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=100&h=100&fit=crop',
+    initials: 'MS',
+  },
+  {
+    name: 'Dr. James Rivera',
+    specialty: 'Rheumatologist',
+    address: '310 E 14th St, New York, NY',
+    rating: 4.4,
+    reviews: 163,
+    distance: '2.5 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$305',
+    costLevel: 'lower',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Mon, May 12',
+    photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop',
+    initials: 'JR',
+  },
+  {
+    name: 'NYU Langone Imaging',
+    specialty: 'Diagnostic imaging center',
+    address: '160 E 34th St, New York, NY',
+    rating: 4.8,
+    reviews: 542,
+    distance: '0.7 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$245',
+    costLevel: 'lower',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Today, May 7',
+    photo: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=100&h=100&fit=crop',
+    initials: 'NL',
+  },
+  {
+    name: 'Dr. Sarah Chen',
+    specialty: 'Rheumatologist',
+    address: '635 Madison Ave, New York, NY',
+    rating: 4.7,
+    reviews: 205,
+    distance: '1.8 miles',
+    virtual: true,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$610',
+    costLevel: 'higher',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Thu, May 8',
+    photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop',
+    initials: 'SC',
+  },
+  {
+    name: 'Manhattan Imaging Center',
+    specialty: 'Radiology clinic',
+    address: '425 Madison Ave, New York, NY',
+    rating: 4.3,
+    reviews: 276,
+    distance: '2.1 miles',
+    virtual: false,
+    networkKey: 'in-network',
+    networkName: '',
+    networkLabel: 'In-network',
+    cost: '$890',
+    costLevel: 'higher',
+    nextApptLabel: 'Next available appointment',
+    nextApptDate: 'Fri, May 9',
+    photo: 'https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=100&h=100&fit=crop',
+    initials: 'MB',
+  },
+]
+
+const DEMO_MAMMOGRAPHY_CONFIG: UseCaseConfig = {
+  id: 'connected',
+  tabLabel: 'Connected',
+  title: 'Connected',
+  description: '',
+  highlights: [],
+  subVariants: [],
+  searchQuery: 'Mammography',
+  resultCount: '1,204 results',
+  bannerType: 'price-range',
+  showCostChips: true,
+  showPrice: true,
+  costLabel: 'est. out-of-pocket',
+  providers: DEMO_MAMMOGRAPHY_PROVIDERS,
+}
+
+const DEMO_BANNER_COPY: BannerCopyEntry[] = [
+  ...INITIAL_BANNER_COPY.map(entry =>
+    entry.network === 'single' && entry.plan === 'connected' && entry.variant === 'coinsurance'
+      ? { ...entry, headline: 'Most people pay $305–$500 for this service in this area' }
+      : entry
+  ),
+]
+
+// ── Demo Scenarios ──────────────────────────────────────────
+
+type DemoScenario = {
+  id: string
+  label: string
+  title: string
+  desc: string
+  searchQuery: string
+  resultCount: string
+  headline: string
+  variant?: 'coinsurance' | 'copay'
+  priceBar: { lo: number; hi: number; min: number; max: number; minLabel: string; maxLabel: string; position?: number }
+  providers: Provider[]
+}
+
+const DEMO_SCENARIOS: DemoScenario[] = [
+  {
+    id: 'retinal-imaging',
+    label: 'Scenario 1',
+    title: 'Retinal Imaging',
+    desc: 'Coinsurance plan — the member pays a percentage of the cost. Prices vary by provider, shown as a range.',
+    searchQuery: 'Retinal imaging',
+    resultCount: '847 results',
+    headline: 'Most people pay $150–$200 for this service in this area',
+    priceBar: { lo: 150, hi: 200, min: 69, max: 212, minLabel: '$69', maxLabel: '$212' },
+    providers: DEMO_RETINAL_PROVIDERS,
+  },
+  {
+    id: 'mammography',
+    label: 'Scenario 2',
+    title: 'MRI Scan',
+    desc: 'Coinsurance plan — wide cost variation across providers. The price range bar highlights the typical window.',
+    searchQuery: 'MRI scan',
+    resultCount: '1,204 results',
+    headline: 'Most people pay $305–$500 for this service in this area',
+    priceBar: { lo: 305, hi: 500, min: 201, max: 5400, minLabel: '$201', maxLabel: '$5,400', position: 2 },
+    providers: DEMO_MAMMOGRAPHY_PROVIDERS,
+  },
+  {
+    id: 'orthopedist-copay',
+    label: 'Scenario 3',
+    title: 'Orthopedist Visit',
+    desc: 'Copay plan — the member pays a flat fee per visit. All in-network providers cost the same.',
+    searchQuery: 'Orthopedist',
+    resultCount: '312 results',
+    headline: "You'll pay $45 per visit",
+    variant: 'copay',
+    priceBar: { lo: 0, hi: 0, min: 0, max: 0, minLabel: '', maxLabel: '' },
+    providers: DEMO_ORTHO_PROVIDERS,
+  },
+]
+
+const SPECIALTIES = [
+  { label: 'Primary care', Icon: PrimaryCareIcon },
+  { label: 'Dentists', Icon: DentistIcon },
+  { label: 'Eye doctor', Icon: EyeDoctorIcon },
+  { label: 'OB-GYN', Icon: ObGynIcon },
+  { label: 'Dermatologist', Icon: DermatologyIcon },
+  { label: 'Orthopedist', Icon: OrthopedistIcon },
+]
+
+const PROCEDURES = ['MRI scan', 'Retinal imaging', 'X-ray', 'Blood test', 'Lipids', 'Mammography']
+
+const RECENT_SEARCHES = [
+  'Primary care provider',
+  'Urgent care',
+  'Mental health specialist',
+]
+
+// iOS keyboard rows (simplified)
+const KB_ROW_1 = ['Q','W','E','R','T','Y','U','I','O','P']
+const KB_ROW_2 = ['A','S','D','F','G','H','J','K','L']
+const KB_ROW_3 = ['Z','X','C','V','B','N','M']
+
+function DemoSearchScreen({ onSelect }: { onSelect: (term: string) => void }) {
+  return (
+    <div style={{ width: '100%', height: '100%', backgroundColor: BG_WHITE, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+      {/* Status Bar */}
+      <div style={{ height: 54, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 8, flexShrink: 0 }}>
+        <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 15, color: TEXT_DEFAULT }}>9:41</span>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ padding: `${SPACE_XXS}px ${SPACE_S}px`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: '#f2f2f2',
+            borderRadius: RADIUS_FULL,
+            padding: '10px 14px',
+          }}>
+            <SearchIcon size="sm" color={TEXT_LIGHT} />
+            <div style={{
+              width: 1.5,
+              height: 18,
+              backgroundColor: PRIMARY_TEXT,
+              animation: 'blink 1s step-end infinite',
+            }} />
+          </div>
+        </div>
+        <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, color: PRIMARY_TEXT, cursor: 'pointer' }}>Cancel</span>
+      </div>
+
+      {/* Blink cursor animation */}
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
+
+      {/* Search Near */}
+      <div style={{ padding: `${SPACE_XXXS}px ${SPACE_S}px ${SPACE_XS}px`, display: 'flex', alignItems: 'center', gap: SPACE_XXXS, flexShrink: 0 }}>
+        <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>Search near </span>
+        <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: W_MEDIUM, color: PRIMARY_TEXT, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          Home (1236 N Wood S...)
+          <ChevronSmallDownIcon size="sm" />
+        </span>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+        {/* Frequently searched specialties */}
+        <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XXS}px` }}>
+          <h3 style={{
+            fontFamily: FONT,
+            fontWeight: W_MEDIUM,
+            fontSize: 16,
+            color: TEXT_DEFAULT,
+            margin: `0 0 ${SPACE_XS}px`,
+          }}>
+            Frequently searched specialities
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: SPACE_XXS,
+          }}>
+            {SPECIALTIES.map(({ label, Icon }) => (
+              <button
+                key={label}
+                onClick={() => onSelect(label)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 12px',
+                  backgroundColor: BG_WHITE,
+                  border: `1px solid ${BORDER_LIGHT}`,
+                  borderRadius: RADIUS_XXS,
+                  cursor: 'pointer',
+                  fontFamily: FONT,
+                  fontSize: 13,
+                  fontWeight: W_REGULAR,
+                  color: TEXT_DEFAULT,
+                  textAlign: 'left',
+                  transition: 'background-color 0.15s ease',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = BG_EXTRA_SUBTLE)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = BG_WHITE)}
+              >
+                <Icon size="md" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Frequently searched procedures */}
+        <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XXS}px` }}>
+          <h3 style={{
+            fontFamily: FONT,
+            fontWeight: W_MEDIUM,
+            fontSize: 16,
+            color: TEXT_DEFAULT,
+            margin: `0 0 ${SPACE_XS}px`,
+          }}>
+            Frequently searched procedures
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE_XXS }}>
+            {PROCEDURES.map((proc) => (
+              <button
+                key={proc}
+                onClick={() => onSelect(proc)}
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 14,
+                  fontWeight: W_REGULAR,
+                  color: TEXT_DEFAULT,
+                  backgroundColor: BG_WHITE,
+                  border: `1px solid ${BORDER_LIGHT}`,
+                  borderRadius: RADIUS_FULL,
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = BG_EXTRA_SUBTLE)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = BG_WHITE)}
+              >
+                {proc}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent searches */}
+        <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XXS}px` }}>
+          <h3 style={{
+            fontFamily: FONT,
+            fontWeight: W_MEDIUM,
+            fontSize: 16,
+            color: TEXT_DEFAULT,
+            margin: `0 0 ${SPACE_XXS}px`,
+          }}>
+            Recent searches
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {RECENT_SEARCHES.map((term) => (
+              <button
+                key={term}
+                onClick={() => onSelect(term)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '12px 4px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: `1px solid ${BORDER_LIGHT}`,
+                  cursor: 'pointer',
+                  fontFamily: FONT,
+                  fontSize: 15,
+                  fontWeight: W_REGULAR,
+                  color: TEXT_DEFAULT,
+                  textAlign: 'left',
+                  width: '100%',
+                  transition: 'background-color 0.15s ease',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = BG_EXTRA_SUBTLE)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Clock16Icon size="sm" color={TEXT_LIGHT} />
+                {term}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Simulated iOS Keyboard */}
+      <div style={{
+        flexShrink: 0,
+        backgroundColor: '#d1d4db',
+        padding: '8px 3px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}>
+        {[KB_ROW_1, KB_ROW_2, KB_ROW_3].map((row, ri) => (
+          <div key={ri} style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 4,
+          }}>
+            {ri === 2 && (
+              <div style={{
+                width: 38, height: 42, backgroundColor: '#abb0ba', borderRadius: 5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 600, color: TEXT_DEFAULT,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 4l-8 8h5v8h6v-8h5z" fill="currentColor"/></svg>
+              </div>
+            )}
+            {row.map(key => (
+              <div
+                key={key}
+                style={{
+                  width: ri === 0 ? 33 : ri === 1 ? 36 : 33,
+                  height: 42,
+                  backgroundColor: '#ffffff',
+                  borderRadius: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: FONT,
+                  fontSize: 22,
+                  fontWeight: W_REGULAR,
+                  color: TEXT_DEFAULT,
+                  boxShadow: '0 1px 0 rgba(0,0,0,0.3)',
+                }}
+              >
+                {key}
+              </div>
+            ))}
+            {ri === 2 && (
+              <div style={{
+                width: 38, height: 42, backgroundColor: '#abb0ba', borderRadius: 5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5m7-7l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+            )}
+          </div>
+        ))}
+        {/* Bottom row: 123 / space / search */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+          <div style={{
+            width: 82, height: 42, backgroundColor: '#abb0ba', borderRadius: 5,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FONT, fontSize: 15, fontWeight: W_REGULAR, color: TEXT_DEFAULT,
+          }}>
+            123
+          </div>
+          <div style={{
+            flex: 1, height: 42, backgroundColor: '#ffffff', borderRadius: 5,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FONT, fontSize: 15, fontWeight: W_REGULAR, color: TEXT_LIGHT,
+          }}>
+            space
+          </div>
+          <div style={{
+            width: 82, height: 42, backgroundColor: '#abb0ba', borderRadius: 5,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FONT, fontSize: 15, fontWeight: W_MEDIUM, color: TEXT_DEFAULT,
+          }}>
+            search
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Demo Flow: Loading Screen ───────────────────────────────
+
+function DemoLoadingScreen({ searchTerm }: { searchTerm: string }) {
+  return (
+    <div style={{ width: '100%', height: '100%', backgroundColor: BG_WHITE, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+      {/* Inline shimmer animation */}
+      <style>{`
+        @keyframes demoShimmer {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      {/* Status Bar */}
+      <div style={{ height: 54, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 8, flexShrink: 0 }}>
+        <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 15, color: TEXT_DEFAULT }}>9:41</span>
+      </div>
+
+      {/* Search Bar with search term */}
+      <div style={{ padding: `${SPACE_XXS}px ${SPACE_S}px`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ flex: 1 }}>
+          <TextInput value={searchTerm} onChange={() => {}} shape="rounded" size="sm" iconRight={<CloseIcon size="sm" />} />
+        </div>
+        <span style={{ fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, color: TEXT_DEFAULT }}>Cancel</span>
+      </div>
+
+      {/* Search Near */}
+      <div style={{ padding: `${SPACE_XXXS}px ${SPACE_S}px ${SPACE_XS}px`, display: 'flex', alignItems: 'center', gap: SPACE_XXXS, flexShrink: 0 }}>
+        <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>Searching near </span>
+        <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: W_MEDIUM, color: PRIMARY_TEXT, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          Home (1236 N Wood S...)
+          <ChevronSmallDownIcon size="sm" />
+        </span>
+      </div>
+
+      {/* Preferences + Map View */}
+      <div style={{ padding: `${SPACE_XXS}px ${SPACE_S}px ${SPACE_S}px`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_XS, borderBottom: `1px solid ${BORDER_LIGHT}`, flexShrink: 0 }}>
+        <Button variant="outline" size="sm" fullWidth iconLeft={<SettingsAdjustIcon size="md" />}>Preferences</Button>
+        <Button variant="outline" size="sm" fullWidth iconLeft={<MapIcon size="md" />}>Map view</Button>
+      </div>
+
+      {/* Loading area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: SPACE_M }}>
+        {/* Spinner */}
+        <div style={{
+          width: 40,
+          height: 40,
+          border: `3px solid ${BORDER_LIGHT}`,
+          borderTopColor: PRIMARY_TEXT,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <span style={{
+          fontFamily: FONT,
+          fontSize: 15,
+          fontWeight: W_REGULAR,
+          color: TEXT_LIGHT,
+        }}>
+          Searching for {searchTerm.toLowerCase()}...
+        </span>
+      </div>
+
+      {/* Skeleton cards at bottom */}
+      <div style={{ padding: `0 ${SPACE_S}px ${SPACE_S}px`, display: 'flex', flexDirection: 'column', gap: SPACE_XS }}>
+        {[1, 2].map(i => (
+          <div key={i} style={{
+            backgroundColor: BG_WHITE,
+            borderRadius: RADIUS_S,
+            border: `1px solid ${BORDER_LIGHT}`,
+            padding: SPACE_S,
+            display: 'flex',
+            gap: SPACE_XXS,
+            alignItems: 'center',
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              backgroundColor: '#eeeeee',
+              animation: 'demoShimmer 1.5s ease-in-out infinite',
+              flexShrink: 0,
+            }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ width: '70%', height: 16, backgroundColor: '#eeeeee', borderRadius: 4, animation: 'demoShimmer 1.5s ease-in-out infinite' }} />
+              <div style={{ width: '50%', height: 14, backgroundColor: '#eeeeee', borderRadius: 4, animation: 'demoShimmer 1.5s ease-in-out infinite', animationDelay: '0.2s' }} />
+              <div style={{ width: '85%', height: 14, backgroundColor: '#eeeeee', borderRadius: 4, animation: 'demoShimmer 1.5s ease-in-out infinite', animationDelay: '0.4s' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Demo Flow: Provider Detail Page ─────────────────────────
+
+interface ProcedureItem {
+  name: string
+  description: string
+  beforeInsurance: string
+  oopCost: string | null
+  oopExplanation: string | null
+  isSearched: boolean
+}
+
+function buildDemoProcedures(provider: Provider, searchQuery = 'MRI scan'): ProcedureItem[] {
+  const oopNum = parseDollar(provider.cost)
+  const beforeIns = Math.round(oopNum * 2.5 / 10) * 10 // ~2.5x multiplier, rounded
+  const fmtD = (n: number) => '$' + n.toLocaleString('en-US')
+
+  if (searchQuery.toLowerCase().includes('orthopedist')) {
+    return [
+      { name: 'Office visit — Orthopedist', description: 'Initial or follow-up consultation with an orthopedic specialist.', beforeInsurance: fmtD(250), oopCost: '$45', oopExplanation: "Copay", isSearched: true },
+      { name: 'X-ray, knee', description: 'Diagnostic X-ray imaging of the knee joint.', beforeInsurance: fmtD(180), oopCost: '$72', oopExplanation: "You'll pay 40% coinsurance after deductible", isSearched: false },
+      { name: 'Joint injection', description: 'Corticosteroid or hyaluronic acid injection for joint pain relief.', beforeInsurance: fmtD(350), oopCost: '$140', oopExplanation: "You'll pay 40% coinsurance after deductible", isSearched: false },
+      { name: 'Physical therapy evaluation', description: 'Initial evaluation for a physical therapy treatment plan.', beforeInsurance: fmtD(300), oopCost: '$45', oopExplanation: "Copay — same as office visit", isSearched: false },
+    ]
+  }
+
+  if (searchQuery.toLowerCase().includes('retinal')) {
+    return [
+      { name: 'Retinal imaging', description: 'High-resolution imaging of the retina to detect conditions such as macular degeneration.', beforeInsurance: fmtD(beforeIns), oopCost: provider.cost, oopExplanation: "You'll pay 40% of the service price", isSearched: true },
+      { name: 'OCT scan', description: 'Optical coherence tomography of the retina for cross-sectional imaging.', beforeInsurance: fmtD(Math.round(beforeIns * 1.4 / 10) * 10), oopCost: fmtD(Math.round(oopNum * 1.5 / 10) * 10), oopExplanation: "You'll pay 40% of the service price", isSearched: false },
+      { name: 'Visual field test', description: 'Automated perimetry to assess peripheral vision loss.', beforeInsurance: fmtD(Math.round(beforeIns * 0.6 / 10) * 10), oopCost: fmtD(Math.round(oopNum * 0.55 / 10) * 10), oopExplanation: "You'll pay 40% of the service price", isSearched: false },
+      { name: 'Fundus photography', description: 'Detailed photograph of the back of the eye for diagnostic review.', beforeInsurance: fmtD(Math.round(beforeIns * 1.8 / 10) * 10), oopCost: null, oopExplanation: 'Not available. Cost depends on your plan details.', isSearched: false },
+    ]
+  }
+
+  // Default: MRI procedures
+  return [
+    { name: 'MRI scan', description: 'Magnetic resonance imaging of the brain without contrast.', beforeInsurance: fmtD(beforeIns), oopCost: provider.cost, oopExplanation: "You'll pay $45 copay plus 40% of the service price", isSearched: true },
+    { name: 'MRI, lumbar spine', description: 'MRI of the lower back to evaluate spinal conditions.', beforeInsurance: fmtD(Math.round(beforeIns * 1.5 / 10) * 10), oopCost: fmtD(Math.round(oopNum * 1.6 / 10) * 10), oopExplanation: "You'll pay $45 copay plus 40% of the service price", isSearched: false },
+    { name: 'MRI, knee', description: 'MRI of the knee joint to assess ligament or cartilage issues.', beforeInsurance: fmtD(Math.round(beforeIns * 0.75 / 10) * 10), oopCost: fmtD(Math.round(oopNum * 0.7 / 10) * 10), oopExplanation: "You'll pay a $45 copay plus 30% of your remaining deductible", isSearched: false },
+    { name: 'MRI, with contrast', description: 'MRI with gadolinium contrast for enhanced imaging detail.', beforeInsurance: fmtD(Math.round(beforeIns * 1.9 / 10) * 10), oopCost: null, oopExplanation: 'Not available. Cost depends on your plan details.', isSearched: false },
+  ]
+}
+
+const PROVIDER_DETAIL_TABS = ['Info', 'Locations & costs', 'Reviews', 'Similar providers']
+
+function DemoProviderDetailPage({ provider, onBack, searchQuery }: { provider: Provider; onBack: () => void; searchQuery?: string }) {
+  const [bookmarked, setBookmarked] = useState(false)
+
+  return (
+    <div style={{ width: '100%', height: '100%', backgroundColor: BG_WHITE, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+      {/* Status Bar */}
+      <div style={{ height: 54, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 8, flexShrink: 0 }}>
+        <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 15, color: TEXT_DEFAULT }}>9:41</span>
+      </div>
+
+      {/* Top nav: back + bookmark */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${SPACE_XXS}px ${SPACE_S}px`, flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+          <ChevronLeftIcon size="md" color={TEXT_DEFAULT} />
+        </button>
+        <button onClick={() => setBookmarked(!bookmarked)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+          {bookmarked ? <BookmarkSolidIcon size="md" color={PRIMARY_TEXT} /> : <BookmarkLineIcon size="md" color={TEXT_DEFAULT} />}
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+        {/* Provider header */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${SPACE_XXS}px ${SPACE_S}px ${SPACE_S}px` }}>
+          {/* Avatar */}
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', overflow: 'hidden',
+            backgroundColor: BG_EXTRA_SUBTLE, flexShrink: 0, marginBottom: SPACE_XS,
+          }}>
+            <img src={provider.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          </div>
+
+          {/* Name */}
+          <h2 style={{
+            fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 24, lineHeight: '29px',
+            color: TEXT_DEFAULT, margin: 0, textAlign: 'center',
+          }}>
+            {provider.name}
+          </h2>
+
+          {/* Specialty */}
+          <p style={{
+            fontFamily: FONT, fontWeight: W_REGULAR, fontSize: 16, lineHeight: '19px',
+            color: TEXT_DARK, margin: `${SPACE_XXXS}px 0 0`,
+          }}>
+            {provider.specialty}
+          </p>
+
+          {/* In-network badge */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: SPACE_XXS,
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: SUCCESS_DEFAULT }} />
+            <span style={{ fontFamily: FONT, fontSize: 16, color: TEXT_DEFAULT }}>{provider.networkLabel}</span>
+          </div>
+        </div>
+
+        {/* Details row */}
+        <div style={{ padding: `0 ${SPACE_S}px ${SPACE_XS}px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <StarLineIcon size="sm" color={TEXT_LIGHT} />
+            <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>{provider.rating}/5 ({provider.reviews})</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+            <LocationIcon size="sm" color={TEXT_LIGHT} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>{provider.distance} · {provider.address}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <VideoCameraIcon size="sm" color={TEXT_LIGHT} />
+            <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>Virtual appointment</span>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          display: 'flex', gap: 0, padding: `${SPACE_S}px ${SPACE_S}px 0`,
+          borderBottom: `1px solid ${BORDER_LIGHT}`, flexShrink: 0, overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}>
+          {PROVIDER_DETAIL_TABS.map(tab => {
+            const isActive = tab === 'Locations & costs'
+            return (
+              <div key={tab} style={{
+                padding: '8px 12px',
+                borderRadius: `${RADIUS_XXS}px ${RADIUS_XXS}px 0 0`,
+                backgroundColor: isActive ? TEXT_DEFAULT : 'transparent',
+                color: isActive ? BG_WHITE : TEXT_DARK,
+                fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 14,
+                whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
+              }}>
+                {tab}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Locations & Costs content */}
+        <div style={{ padding: `${SPACE_S}px 0` }}>
+          {/* Section heading */}
+          <h3 style={{
+            fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 24, lineHeight: '29px',
+            color: TEXT_DEFAULT, margin: 0, padding: `0 ${SPACE_S}px ${SPACE_S}px`,
+          }}>
+            Locations & Costs (2)
+          </h3>
+
+          {/* Map placeholder */}
+          <div style={{
+            margin: `0 ${SPACE_S}px ${SPACE_S}px`,
+            height: 160, borderRadius: RADIUS_XXS, backgroundColor: '#e8e8e8',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Simplified map pins */}
+            {[[120, 70], [220, 90]].map(([x, y], i) => (
+              <div key={i} style={{
+                position: 'absolute', left: x, top: y,
+                width: 24, height: 24, borderRadius: '50% 50% 50% 0',
+                backgroundColor: PRIMARY_TEXT, transform: 'rotate(-45deg)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: BG_WHITE, transform: 'rotate(45deg)' }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Location address block */}
+          <div style={{ padding: `0 ${SPACE_S}px ${SPACE_XS}px` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 14, color: TEXT_DEFAULT, flex: 1 }}>
+                {provider.address}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: SUCCESS_DEFAULT }} />
+                <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>In-network</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <PhoneIcon size="sm" color={PRIMARY_TEXT} />
+              <span style={{ fontFamily: FONT, fontSize: 14, color: PRIMARY_TEXT }}>+1 555-757-9011</span>
+            </div>
+          </div>
+
+          {/* Procedures heading */}
+          <div style={{ padding: `${SPACE_S}px ${SPACE_S}px ${SPACE_XXS}px`, borderTop: `1px solid ${BORDER_LIGHT}` }}>
+            <h4 style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT, margin: 0 }}>
+              Procedures for this location
+            </h4>
+            <p style={{ fontFamily: FONT, fontSize: 16, lineHeight: '19px', color: TEXT_DARK, margin: `${SPACE_XXS}px 0 0` }}>
+              Procedure availability may vary by location. Call ahead to confirm what's offered at this site.
+            </p>
+          </div>
+
+          {/* Procedure cards */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {buildDemoProcedures(provider, searchQuery).map((proc, idx) => (
+              <div key={idx} style={{
+                padding: `${SPACE_M}px ${SPACE_S}px`,
+                borderTop: `1px solid ${BORDER_LIGHT}`,
+                ...(proc.isSearched ? {
+                  borderLeft: `3px solid ${PRIMARY_TEXT}`,
+                  backgroundColor: 'rgba(253, 82, 1, 0.04)',
+                } : {}),
+              }}>
+                {/* Procedure name + searched badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 18, lineHeight: '22px', color: TEXT_DEFAULT }}>
+                    {proc.name}
+                  </span>
+                  {proc.isSearched && (
+                    <span style={{
+                      fontFamily: FONT, fontSize: 11, fontWeight: W_MEDIUM,
+                      color: PRIMARY_TEXT, backgroundColor: 'rgba(253, 82, 1, 0.1)',
+                      padding: '2px 8px', borderRadius: RADIUS_FULL,
+                    }}>
+                      Searched
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <p style={{ fontFamily: FONT, fontSize: 16, lineHeight: '19px', color: TEXT_DARK, margin: `0 0 ${SPACE_S}px` }}>
+                  {proc.description}
+                </p>
+
+                {/* Two-column pricing */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_S }}>
+                  {/* Before insurance */}
+                  <div>
+                    <div style={{ marginBottom: SPACE_XXS }}>
+                      <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 16, lineHeight: '19px', color: TEXT_DARK }}>
+                        Before insurance
+                      </span>
+                    </div>
+                    <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
+                      {proc.beforeInsurance}
+                    </span>
+                  </div>
+
+                  {/* Est. out-of-pocket */}
+                  <div>
+                    <div style={{ marginBottom: SPACE_XXS }}>
+                      <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 16, lineHeight: '19px', color: TEXT_DARK }}>
+                        Est. out-of-pocket-cost
+                      </span>
+                    </div>
+                    {proc.oopCost ? (
+                      <>
+                        <span style={{ fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 20, lineHeight: '24px', color: TEXT_DEFAULT }}>
+                          {proc.oopCost}
+                        </span>
+                        {proc.oopExplanation && (
+                          <p style={{ fontFamily: FONT, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT, margin: `${SPACE_XXS}px 0 0` }}>
+                            {proc.oopExplanation}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p style={{ fontFamily: FONT, fontSize: 16, lineHeight: '19px', color: TEXT_DEFAULT, margin: 0 }}>
+                        {proc.oopExplanation}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search all procedures */}
+          <div style={{
+            margin: `${SPACE_XS}px ${SPACE_S}px ${SPACE_S}px`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', border: `1px solid ${BORDER_STRONG}`,
+            borderRadius: RADIUS_FULL, cursor: 'pointer',
+          }}>
+            <SearchIcon size="sm" color={TEXT_LIGHT} />
+            <span style={{ fontFamily: FONT, fontWeight: W_MEDIUM, fontSize: 14, color: TEXT_DARK }}>
+              Search all procedures (11)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky bottom bar */}
+      <div style={{
+        flexShrink: 0, borderTop: `1px solid ${BORDER_LIGHT}`,
+        padding: `${SPACE_XXS}px ${SPACE_S}px ${SPACE_L}px`,
+        backgroundColor: BG_WHITE,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: SPACE_XXS }}>
+          <CalendarIcon size="sm" color={TEXT_DEFAULT} />
+          <span style={{ fontFamily: FONT, fontSize: 14, color: TEXT_DEFAULT }}>
+            Next available appointment <strong>{provider.nextApptDate}</strong>
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE_XXS }}>
+          <Button variant="outline" size="md" fullWidth iconLeft={<PhoneIcon size="sm" />}>Call</Button>
+          <Button variant="secondary" size="md" fullWidth>Book</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Price Bar Explorer ──────────────────────────────────────
+
+const BAR_EXPLORER_VARIANTS = [
+  { position: 1,  lo: '$100',    hi: '$400',    min: '$100',   max: '$22,200' },
+  { position: 2,  lo: '$2,400',  hi: '$3,800',  min: '$100',   max: '$22,200' },
+  { position: 3,  lo: '$4,600',  hi: '$6,200',  min: '$100',   max: '$22,200' },
+  { position: 4,  lo: '$7,000',  hi: '$8,600',  min: '$100',   max: '$22,200' },
+  { position: 5,  lo: '$9,500',  hi: '$11,200', min: '$100',   max: '$22,200' },
+  { position: 6,  lo: '$11,800', hi: '$13,400', min: '$100',   max: '$22,200' },
+  { position: 7,  lo: '$14,000', hi: '$15,800', min: '$100',   max: '$22,200' },
+  { position: 8,  lo: '$16,200', hi: '$17,800', min: '$100',   max: '$22,200' },
+  { position: 9,  lo: '$18,500', hi: '$20,000', min: '$100',   max: '$22,200' },
+  { position: 10, lo: '$20,800', hi: '$22,200', min: '$100',   max: '$22,200' },
+]
+
+function calcBarLeftFraction(v: typeof BAR_EXPLORER_VARIANTS[0]): number {
+  // Use the predefined position directly: position 1 = 0.0 (far left), 10 = 1.0 (far right)
+  return (v.position - 1) / 9
+}
+
+/**
+ * calcPriceBarPosition — Determines which of 10 fixed positions the blue segment should occupy.
+ *
+ * HOW IT WORKS:
+ * 1. The bar is divided into 10 equal visual positions (1 = far left, 5 = center, 10 = far right)
+ * 2. The midpoint of the blue range (lo+hi)/2 is calculated
+ * 3. That midpoint is mapped linearly to the min–max scale and snapped to 1 of 10 positions
+ * 4. Returns { position (1–10), leftFraction (0–1) } for use with PriceRangeBarV2
+ *
+ * USAGE:
+ *   const { leftFraction } = calcPriceBarPosition(1400, 2200, 100, 22200)
+ *   <PriceRangeBarV2 leftFraction={leftFraction} min="$100" max="$22,200" />
+ *
+ * FADE LOGIC (handled by PriceRangeBarV2):
+ *   - Positions 1–3 (left side): right grey fades out
+ *   - Positions 4–7 (center): both sides fade out
+ *   - Positions 8–10 (right side): left grey fades out
+ */
+function calcPriceBarPosition(lo: number, hi: number, min: number, max: number): { position: number; leftFraction: number } {
+  const midpoint = (lo + hi) / 2
+  const raw = (midpoint - min) / (max - min)
+  const position = Math.max(1, Math.min(10, Math.round(raw * 9 + 1)))
+  const leftFraction = (position - 1) / 9
+  return { position, leftFraction }
+}
+
+// V2 Bar matching Figma design: flex layout, solid left grey, gradient right grey, fixed pill
+function PriceRangeBarV2({ leftFraction, min, max }: { leftFraction: number; min: string; max: string }) {
+  // leftFraction: 0–1, determines how far right the pill sits
+  // Pill width is fixed at 65px (from Figma), left grey fills proportionally
+  const PILL_W = 65
+  const leftFlexGrow = leftFraction
+  const rightFlexGrow = Math.max(0, 1 - leftFraction)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Bar row */}
+      <div style={{ display: 'flex', gap: 2, alignItems: 'center', overflow: 'clip' }}>
+        {/* Left grey — fade only when pill is right or center */}
+        {leftFraction > 0 && (
+          <div style={{
+            flexGrow: leftFlexGrow, height: 10, flexShrink: 0, minWidth: leftFraction > 0 ? 4 : 0,
+            background: leftFraction > 0.65 || (leftFraction >= 0.35 && leftFraction <= 0.65)
+              ? 'linear-gradient(to right, rgba(255,255,255,0) 0%, #e4e4e4 86%, #e4e4e4 100%)'
+              : '#e4e4e4',
+          }} />
+        )}
+        {/* Blue segment */}
+        <div style={{ width: PILL_W, height: 14, backgroundColor: '#245eff', borderRadius: 0, flexShrink: 0 }} />
+        {/* Right grey — fade only when pill is left or center; hidden at far right */}
+        {rightFlexGrow > 0 && (
+          <div style={{
+            flexGrow: rightFlexGrow, height: 10, minWidth: 4, flexShrink: 0,
+            background: leftFraction < 0.35 || (leftFraction >= 0.35 && leftFraction <= 0.65)
+              ? 'linear-gradient(to right, #e4e4e4 0%, #e4e4e4 14%, rgba(255,255,255,0) 100%)'
+              : '#e4e4e4',
+          }} />
+        )}
+      </div>
+      {/* Min/Max labels */}
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: '#949494' }}>{min}</span>
+        <span style={{ fontFamily: FONT, fontSize: 12, color: '#949494' }}>{max}</span>
+      </div>
+    </div>
+  )
+}
+
+function PriceBarExplorer({ onClose, bannerCopy }: { onClose: () => void; bannerCopy: BannerCopyEntry[] }) {
+  const [selected, setSelected] = useState(5)
+  const [docOpen, setDocOpen] = useState(false)
+  const selectedVariant = BAR_EXPLORER_VARIANTS.find(v => v.position === selected)!
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: '#ffffff',
+      zIndex: 9999,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 32px',
+        borderBottom: `1px solid ${BORDER_LIGHT}`,
+        flexShrink: 0,
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 24, color: TEXT_DEFAULT }}>
+            Price Range Bar V2
+          </h1>
+          <p style={{ margin: '4px 0 0', fontFamily: FONT, fontSize: 14, color: TEXT_DARK }}>
+            Fixed-size pill · 10 positions · Click a variant to preview in phone
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 36, height: 36, borderRadius: '50%', border: `1px solid ${BORDER_LIGHT}`,
+            backgroundColor: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: 18, color: TEXT_DARK, fontFamily: FONT,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Split layout */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left: variant cards */}
+        <div style={{ width: 420, flexShrink: 0, overflow: 'auto', padding: '24px 20px', borderRight: `1px solid ${BORDER_LIGHT}` }}>
+          {/* Developer Documentation — Accordion */}
+          <div style={{
+            marginBottom: 20, padding: '16px 20px', borderRadius: 16,
+            border: `1px solid ${BORDER_LIGHT}`, backgroundColor: '#f9fafb',
+          }}>
+            <div
+              onClick={() => setDocOpen(!docOpen)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', userSelect: 'none' as const,
+              }}
+            >
+              <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: W_MEDIUM, color: TEXT_DEFAULT, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>
+                How it works — Developer Reference
+              </div>
+              <span style={{ fontSize: 14, color: TEXT_DARK, transition: 'transform 0.2s', transform: docOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+            </div>
+            {docOpen && (
+              <div style={{ fontFamily: FONT, fontSize: 13, lineHeight: '20px', color: TEXT_DARK, marginTop: 16 }}>
+                <p style={{ margin: '0 0 8px' }}><strong>10 fixed positions</strong> — The bar has 10 visual slots. Position 1 = far left, position 5 = center, position 10 = far right. The blue segment is always 65px wide.</p>
+                <p style={{ margin: '0 0 8px' }}><strong>Position selection</strong> — Use <code style={{ backgroundColor: '#e8e8e8', padding: '1px 4px', borderRadius: 4, fontSize: 12 }}>calcPriceBarPosition(lo, hi, min, max)</code> to compute the position. It calculates the midpoint of the blue range, maps it linearly across the min–max span, and snaps to the nearest of 10 positions.</p>
+                <p style={{ margin: '0 0 8px' }}><strong>Fade logic</strong> — The grey bar fades out on the longer side. Left positions (1–3): right side fades. Center (4–7): both sides fade. Right (8–10): left side fades.</p>
+                <p style={{ margin: '0 0 8px' }}><strong>Usage:</strong></p>
+                <pre style={{ backgroundColor: '#e8e8e8', padding: 12, borderRadius: 8, fontSize: 11, lineHeight: '16px', overflow: 'auto', margin: 0 }}>{`const { leftFraction } = calcPriceBarPosition(
+  1400, 2200,  // blue range (lo, hi)
+  100, 22200   // full range (min, max)
+)
+
+<PriceRangeBarV2
+  leftFraction={leftFraction}
+  min="$100"
+  max="$22,200"
+/>`}</pre>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {BAR_EXPLORER_VARIANTS.map((v) => {
+              const isSelected = v.position === selected
+              const leftFraction = calcBarLeftFraction(v)
+              return (
+                <div
+                  key={v.position}
+                  onClick={() => setSelected(v.position)}
+                  style={{
+                    padding: 20,
+                    borderRadius: 16,
+                    border: isSelected ? `2px solid ${BLUE_SELECTED}` : `1px solid ${BORDER_LIGHT}`,
+                    backgroundColor: isSelected ? '#f8f9ff' : BG_EXTRA_SUBTLE,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {/* Position label */}
+                  <div style={{
+                    fontFamily: FONT, fontSize: 11, fontWeight: W_MEDIUM,
+                    color: isSelected ? BLUE_TEXT_DARK : TEXT_DARK,
+                    textTransform: 'uppercase' as const, letterSpacing: '0.8px', marginBottom: 8,
+                  }}>
+                    Position {v.position}/10
+                  </div>
+
+                  {/* Headline */}
+                  <p style={{ margin: '0 0 12px', fontFamily: FONT_DISPLAY, fontWeight: W_MEDIUM, fontSize: 16, lineHeight: '20px', color: TEXT_DEFAULT }}>
+                    Most people pay{' '}
+                    <span style={{ color: BLUE_TEXT_DARK }}>{v.lo}–{v.hi}</span>
+                    {' '}for this service in this area
+                  </p>
+
+                  {/* V2 Bar */}
+                  <PriceRangeBarV2 leftFraction={leftFraction} min={v.min} max={v.max} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: iPhone preview with real ScreenContent */}
+        <div style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: '#f5f5f5', overflow: 'auto', padding: 24,
+        }}>
+          <div style={{ transform: 'scale(0.82)', transformOrigin: 'center center' }}>
+            <IPhoneFrame>
+              <ScreenContent
+                config={USE_CASES[0]}
+                subVariant="a"
+                bannerCopy={bannerCopy.map(entry =>
+                  entry.network === 'single' && entry.plan === 'connected' && entry.variant === 'coinsurance'
+                    ? { ...entry, headline: `Most people pay ${selectedVariant.lo}–${selectedVariant.hi} for this service in this area` }
+                    : entry
+                )}
+                usePriceBarV2={{
+                  leftFraction: calcBarLeftFraction(selectedVariant),
+                  min: selectedVariant.min,
+                  max: selectedVariant.max,
+                }}
+              />
+            </IPhoneFrame>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Demo Flow: Main Wrapper ─────────────────────────────────
+
+type DemoStep = 'search' | 'loading' | 'results' | 'provider-detail'
+
+function DemoFlow({ onClose }: { onClose: () => void }) {
+  const [scenarioIdx, setScenarioIdx] = useState(1) // default to Scenario 2
+  const [step, setStep] = useState<DemoStep>('search')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
+
+  const activeScenario = DEMO_SCENARIOS[scenarioIdx]
+  const isPlaceholder = activeScenario.providers.length === 0
+
+  const handleSelectScenario = useCallback((idx: number) => {
+    setScenarioIdx(idx)
+    setStep('search')
+    setSearchTerm('')
+    setSelectedProvider(null)
+  }, [])
+
+  const handleSelect = useCallback((term: string) => {
+    setSearchTerm(term)
+    setStep('loading')
+  }, [])
+
+  // 2s loading timer
+  useEffect(() => {
+    if (step !== 'loading') return
+    const timer = setTimeout(() => setStep('results'), 2000)
+    return () => clearTimeout(timer)
+  }, [step])
+
+  const handleProviderClick = useCallback((provider: Provider) => {
+    setSelectedProvider(provider)
+    setStep('provider-detail')
+  }, [])
+
+  const handleBack = useCallback(() => {
+    if (step === 'provider-detail') { setStep('results'); setSelectedProvider(null) }
+    else if (step === 'results') { setStep('search'); setSearchTerm('') }
+    else if (step === 'loading') { setStep('search'); setSearchTerm('') }
+    else onClose()
+  }, [step, onClose])
+
+  // Build config from active scenario
+  const config: UseCaseConfig = {
+    ...DEMO_MAMMOGRAPHY_CONFIG,
+    searchQuery: activeScenario.searchQuery || 'Mammography',
+    resultCount: activeScenario.resultCount || '0 results',
+    providers: activeScenario.providers,
+    ...(activeScenario.variant === 'copay' ? {
+      bannerType: 'copay' as BannerType,
+      showCostChips: false,
+    } : {}),
+  }
+
+  const scenarioBannerCopy: BannerCopyEntry[] = activeScenario.headline
+    ? INITIAL_BANNER_COPY.map(entry => {
+        if (entry.network === 'single' && entry.plan === 'connected') {
+          if (entry.variant === 'coinsurance' && activeScenario.variant !== 'copay') {
+            return { ...entry, headline: activeScenario.headline }
+          }
+          if (entry.variant === 'copay' && activeScenario.variant === 'copay') {
+            return { ...entry, headline: activeScenario.headline }
+          }
+        }
+        return entry
+      })
+    : DEMO_BANNER_COPY
+
+  const scenarioPriceBarV2 = activeScenario.priceBar.max > 0
+    ? {
+        leftFraction: activeScenario.priceBar.position != null
+          ? (activeScenario.priceBar.position - 1) / 9
+          : calcPriceBarPosition(
+              activeScenario.priceBar.lo, activeScenario.priceBar.hi,
+              activeScenario.priceBar.min, activeScenario.priceBar.max
+            ).leftFraction,
+        min: activeScenario.priceBar.minLabel,
+        max: activeScenario.priceBar.maxLabel,
+      }
+    : undefined
+
+  return (
+    <div style={{
+      height: '100vh',
+      backgroundColor: '#f5f5f5',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 48,
+      overflow: 'hidden',
+    }}>
+      {/* Left: Flow info + controls */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 300 }}>
+        <button
+          onClick={onClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontFamily: FONT,
+            fontSize: 14,
+            fontWeight: W_MEDIUM,
+            color: '#666666',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <ChevronSmallLeftIcon size="sm" />
+          Back to gallery
+        </button>
+
+        <h2 style={{
+          fontFamily: FONT_DISPLAY,
+          fontWeight: W_MEDIUM,
+          fontSize: 26,
+          lineHeight: '32px',
+          color: '#000000',
+          margin: 0,
+          letterSpacing: '-0.3px',
+        }}>
+          Interactive Demo
+        </h2>
+
+        {/* Scenario selector */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {DEMO_SCENARIOS.map((s, idx) => {
+            const isActive = idx === scenarioIdx
+            return (
+              <button
+                key={s.id}
+                onClick={() => handleSelectScenario(idx)}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  fontFamily: FONT,
+                  fontSize: 13,
+                  fontWeight: W_MEDIUM,
+                  color: isActive ? '#ffffff' : TEXT_DARK,
+                  backgroundColor: isActive ? '#000000' : '#ffffff',
+                  border: `1px solid ${isActive ? '#000000' : BORDER_LIGHT}`,
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {s.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Scenario-specific info */}
+        <div>
+          <h3 style={{
+            fontFamily: FONT,
+            fontWeight: W_MEDIUM,
+            fontSize: 18,
+            lineHeight: '24px',
+            color: TEXT_DEFAULT,
+            margin: 0,
+          }}>
+            {activeScenario.title}
+          </h3>
+          <p style={{
+            fontFamily: FONT,
+            fontWeight: W_REGULAR,
+            fontSize: 14,
+            lineHeight: '21px',
+            color: TEXT_LIGHT,
+            marginTop: 8,
+            marginBottom: 0,
+          }}>
+            {activeScenario.desc}
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        {step !== 'search' && (
+          <button
+            onClick={handleBack}
+            style={{
+              fontFamily: FONT,
+              fontSize: 13,
+              fontWeight: W_MEDIUM,
+              color: PRIMARY_TEXT,
+              backgroundColor: 'transparent',
+              border: `1px solid ${PRIMARY_TEXT}`,
+              borderRadius: RADIUS_XXS,
+              padding: '8px 16px',
+              cursor: 'pointer',
+              width: 'fit-content',
+            }}
+          >
+            ← Restart flow
+          </button>
+        )}
+      </div>
+
+      {/* Right: iPhone Frame */}
+      <div style={{
+        width: (IPHONE_WIDTH + BEZEL * 2) * 0.82,
+        height: (IPHONE_HEIGHT + BEZEL * 2) * 0.82,
+        flexShrink: 0,
+        position: 'relative',
+      }}>
+        <div style={{
+          transform: 'scale(0.82)',
+          transformOrigin: 'top left',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+        }}>
+          <IPhoneFrame>
+            {isPlaceholder ? (
+              <div style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: FONT,
+                fontSize: 16,
+                color: TEXT_DARK,
+                padding: 32,
+                textAlign: 'center' as const,
+              }}>
+                Coming soon — select Scenario 2 to see the demo
+              </div>
+            ) : (
+              <>
+                {step === 'search' && (
+                  <DemoSearchScreen onSelect={handleSelect} />
+                )}
+                {step === 'loading' && (
+                  <DemoLoadingScreen searchTerm={searchTerm} />
+                )}
+                {step === 'results' && (
+                  <ScreenContent
+                    key="demo-results"
+                    config={config}
+                    subVariant="a"
+                    selectedProcedure={null}
+                    onSelectProcedure={() => {}}
+                    onOpenModal={() => {}}
+                    isLoading={false}
+                    multiNetwork={false}
+                    bannerCopy={scenarioBannerCopy}
+                    onProviderClick={handleProviderClick}
+                    usePriceBarV2={scenarioPriceBarV2}
+                  />
+                )}
+              </>
+            )}
+            {step === 'provider-detail' && selectedProvider && (
+              <DemoProviderDetailPage provider={selectedProvider} onBack={handleBack} searchQuery={activeScenario.searchQuery} />
+            )}
+          </IPhoneFrame>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Gallery Page ────────────────────────────────────────────
 
 export function SearchResultsPage() {
@@ -3149,6 +4612,8 @@ export function SearchResultsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showCopyRef, setShowCopyRef] = useState(false)
   const [bannerCopy, setBannerCopy] = useState<BannerCopyEntry[]>(INITIAL_BANNER_COPY)
+  const [showDemoFlow, setShowDemoFlow] = useState(false)
+  const [showBarExplorer, setShowBarExplorer] = useState(false)
   const useCases = networkType === 'single' ? USE_CASES : MULTI_NETWORK_USE_CASES
   const config = useCases.find(c => c.id === activeCase)!
 
@@ -3176,6 +4641,16 @@ export function SearchResultsPage() {
   const switchNetwork = (id: NetworkType) => { setNetworkType(id); setActiveCase('connected'); setActiveSubVariant('a'); resetSelection() }
   const switchCase = (id: PlanType) => { setActiveCase(id); setActiveSubVariant('a'); resetSelection() }
   const switchSub = (id: string) => { setActiveSubVariant(id); resetSelection() }
+
+  // Demo Flow mode
+  if (showDemoFlow) {
+    return <DemoFlow onClose={() => setShowDemoFlow(false)} />
+  }
+
+  // Price Bar Explorer mode
+  if (showBarExplorer) {
+    return <PriceBarExplorer onClose={() => setShowBarExplorer(false)} bannerCopy={bannerCopy} />
+  }
 
   return (
     <div
@@ -3294,7 +4769,32 @@ export function SearchResultsPage() {
           padding: '12px 8px',
           borderTop: '1px solid #d5d5d5',
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
         }}>
+          <button
+            onClick={() => setShowDemoFlow(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              fontFamily: FONT,
+              fontWeight: W_MEDIUM,
+              fontSize: 12,
+              color: '#ffffff',
+              backgroundColor: PRIMARY_TEXT,
+              border: 'none',
+              borderRadius: 8,
+              padding: '8px 12px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>▶</span>
+            Interactive Demo
+          </button>
           <button
             onClick={() => setShowCopyRef(true)}
             style={{
@@ -3316,6 +4816,28 @@ export function SearchResultsPage() {
           >
             <span style={{ fontSize: 14 }}>📋</span>
             Copy reference
+          </button>
+          <button
+            onClick={() => setShowBarExplorer(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              fontFamily: FONT,
+              fontWeight: W_MEDIUM,
+              fontSize: 12,
+              color: '#666666',
+              backgroundColor: '#f5f5f5',
+              border: '1px solid #d5d5d5',
+              borderRadius: 8,
+              padding: '8px 12px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>📊</span>
+            Price Bar Explorer
           </button>
         </div>
       </aside>
